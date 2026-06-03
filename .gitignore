@@ -8,6 +8,7 @@ obj/
 [Dd]ebug/
 [Rr]elease/
 publish/
+_publish-*/
 *.nuget.props
 *.nuget.targets
 project.lock.json
