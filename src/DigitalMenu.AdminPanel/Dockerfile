@@ -12,7 +12,7 @@ RUN dotnet restore "DigitalMenu.AdminPanel/DigitalMenu.AdminPanel.csproj"
 COPY src/DigitalMenu.AdminPanel/ DigitalMenu.AdminPanel/
 COPY src/DigitalMenu.Core/ DigitalMenu.Core/
 
-ARG API_BASE_URL=https://localhost:7182
+ARG API_BASE_URL=https://digitalmenu-production-72f0.up.railway.app
 RUN printf '{\n  "ApiBaseUrl": "%s"\n}\n' "$API_BASE_URL" > DigitalMenu.AdminPanel/wwwroot/appsettings.json \
     && dotnet publish "DigitalMenu.AdminPanel/DigitalMenu.AdminPanel.csproj" -c Release -o /app/publish
 

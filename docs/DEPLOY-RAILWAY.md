@@ -2,6 +2,14 @@
 
 Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WASM) ve **QR Menü** (Vue). PostgreSQL Railway eklentisi ile gelir.
 
+## Production (güncel)
+
+| Servis | URL / not |
+|--------|-----------|
+| **API** | https://digitalmenu-production-72f0.up.railway.app |
+| **Health** | https://digitalmenu-production-72f0.up.railway.app/health |
+| Değişken listesi | [railway-production.md](./railway-production.md) |
+
 ## Mimari
 
 | Servis | Teknoloji | Railway Root Directory | Dockerfile |
@@ -65,7 +73,7 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
 
    | Arg | Değer |
    |-----|--------|
-   | `VITE_API_BASE_URL` | API domain’iniz (örn. `https://digitalmenu-api.up.railway.app`) |
+   | `VITE_API_BASE_URL` | `https://digitalmenu-production-72f0.up.railway.app` |
 
 5. Public domain oluşturun; bu URL’yi API’de `QrMenu__BaseUrl` olarak `https://<qrmenu-domain>/r` şeklinde güncelleyin.
 
@@ -83,7 +91,7 @@ QR örnek link: `https://<qrmenu-domain>/r/lezzet-duragi?table=Masa+1`
 
    | Arg | Değer |
    |-----|--------|
-   | `API_BASE_URL` | API domain (örn. `https://digitalmenu-api.up.railway.app`) |
+   | `API_BASE_URL` | `https://digitalmenu-production-72f0.up.railway.app` |
 
 4. Public domain oluşturun; bu URL’yi API `CORS_ALLOWED_ORIGINS` listesine ekleyip API’yi yeniden deploy edin.
 

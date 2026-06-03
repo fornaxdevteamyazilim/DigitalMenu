@@ -1,4 +1,5 @@
-# Yalnızca API Railway servisi için (Settings → Config file: railway.api.toml)
+# API Railway servisi — Config file: railway.api.toml
+# Public URL: https://digitalmenu-production-72f0.up.railway.app
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "src/DigitalMenu.API/Dockerfile"

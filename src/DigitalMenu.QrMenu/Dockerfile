@@ -9,7 +9,7 @@ RUN npm install --no-audit --no-fund
 
 COPY src/DigitalMenu.QrMenu/ .
 
-ARG VITE_API_BASE_URL=
+ARG VITE_API_BASE_URL=https://digitalmenu-production-72f0.up.railway.app
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
