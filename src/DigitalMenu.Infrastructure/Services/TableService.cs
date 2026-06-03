@@ -11,11 +11,14 @@ public class TableService : ITableService
     private readonly ITenantProvider _tenantProvider;
     private readonly string _qrMenuBaseUrl;
 
-    public TableService(AppDbContext dbContext, ITenantProvider tenantProvider, IConfiguration configuration)
+    public TableService(
+        AppDbContext dbContext,
+        ITenantProvider tenantProvider,
+        IConfiguration configuration)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
-        _qrMenuBaseUrl = (configuration["QrMenu:BaseUrl"] ?? "http://localhost:5173/r").TrimEnd('/');
+        _qrMenuBaseUrl = QrMenuUrlBuilder.ResolveBaseUrl(configuration);
     }
 
     public async Task<Table> CreateTableAsync(string tableNumber)
@@ -41,7 +44,9 @@ public class TableService : ITableService
 
     public async Task<List<Table>> GetTablesAsync()
     {
-        return await _dbContext.Tables.OrderBy(t => t.TableNumber).ToListAsync();
+        var tables = await _dbContext.Tables.OrderBy(t => t.TableNumber).ToListAsync();
+        await RepairStoredQrUrlsAsync(tables);
+        return tables;
     }
 
     public async Task<bool> ToggleWaiterCallAsync(Guid tableId, bool isCalled)
@@ -68,5 +73,28 @@ public class TableService : ITableService
         _dbContext.Tables.Update(table);
         await _dbContext.SaveChangesAsync();
         return true;
+    }
+
+    private async Task RepairStoredQrUrlsAsync(List<Table> tables)
+    {
+        if (QrMenuUrlBuilder.IsLocalhostBase(_qrMenuBaseUrl))
+            return;
+
+        var dirty = false;
+        foreach (var table in tables)
+        {
+            if (string.IsNullOrEmpty(table.TenantId))
+                continue;
+
+            var correct = QrMenuUrlBuilder.Build(_qrMenuBaseUrl, table.TenantId, table.TableNumber);
+            if (table.QrCodeUrl == correct)
+                continue;
+
+            table.QrCodeUrl = correct;
+            dirty = true;
+        }
+
+        if (dirty)
+            await _dbContext.SaveChangesAsync();
     }
 }

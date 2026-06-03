@@ -10,7 +10,7 @@
 
 | Değişken | Değer |
 |----------|--------|
-| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `ASPNETCORE_ENVIRONMENT` | `Production` *(zorunlu — yoksa API localhost QR URL kullanır)* |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
 | `QrMenu__BaseUrl` | `https://triumphant-abundance-production-1cb2.up.railway.app/r` |
 | `CORS_ALLOWED_ORIGINS` | `https://natural-gentleness-production-c70d.up.railway.app,https://triumphant-abundance-production-1cb2.up.railway.app` |

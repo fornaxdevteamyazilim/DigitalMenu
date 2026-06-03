@@ -20,7 +20,7 @@ public static class DbInitializer
     {
         await context.Database.MigrateAsync();
 
-        var qrBaseUrl = ResolveQrMenuBaseUrl(configuration);
+        var qrBaseUrl = QrMenuUrlBuilder.ResolveBaseUrl(configuration);
 
         // ITenantProvider boşken global filter devreye girer; tenant var mı kontrolü filtresiz yapılır
         if (!await context.Tenants.IgnoreQueryFilters().AnyAsync())
@@ -132,9 +132,12 @@ public static class DbInitializer
     /// </summary>
     public static async Task RefreshQrCodeUrlsAsync(AppDbContext context, IConfiguration configuration)
     {
-        var qrBaseUrl = configuration["QrMenu:BaseUrl"]?.TrimEnd('/');
+        var qrBaseUrl = QrMenuUrlBuilder.ResolveBaseUrl(configuration);
         if (QrMenuUrlBuilder.IsLocalhostBase(qrBaseUrl))
+        {
+            Console.WriteLine("--> QR URL güncellemesi atlandı: QrMenu__BaseUrl / Production ayarı yok.");
             return;
+        }
 
         var tables = await context.Tables.IgnoreQueryFilters().ToListAsync();
         var updated = 0;
@@ -153,15 +156,9 @@ public static class DbInitializer
         }
 
         if (updated > 0)
+        {
             await context.SaveChangesAsync();
-    }
-
-    private static string ResolveQrMenuBaseUrl(IConfiguration configuration)
-    {
-        var configured = configuration["QrMenu:BaseUrl"]?.TrimEnd('/');
-        if (!string.IsNullOrWhiteSpace(configured))
-            return configured;
-
-        return "http://localhost:5173/r";
+            Console.WriteLine($"--> {updated} masa QR linki güncellendi → {qrBaseUrl}");
+        }
     }
 }
