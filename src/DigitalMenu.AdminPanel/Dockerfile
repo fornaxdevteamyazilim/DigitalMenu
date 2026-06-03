@@ -22,7 +22,7 @@ ENV PORT=8080
 ENV API_BASE_URL=https://digitalmenu-production-72f0.up.railway.app
 COPY src/DigitalMenu.AdminPanel/nginx-spa.conf /etc/nginx/conf.d/default.conf
 COPY src/DigitalMenu.AdminPanel/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
 EXPOSE 8080
 ENTRYPOINT ["/docker-entrypoint.sh"]
