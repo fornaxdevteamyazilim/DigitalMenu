@@ -4,4 +4,6 @@ dockerfilePath = "src/DigitalMenu.AdminPanel/Dockerfile"
 
 
 [deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"

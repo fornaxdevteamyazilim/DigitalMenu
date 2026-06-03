@@ -17,6 +17,7 @@ RUN printf '{\n  "ApiBaseUrl": "%s"\n}\n' "$API_BASE_URL" > DigitalMenu.AdminPan
     && dotnet publish "DigitalMenu.AdminPanel/DigitalMenu.AdminPanel.csproj" -c Release -o /app/publish
 
 FROM nginx:alpine AS final
-COPY src/DigitalMenu.AdminPanel/nginx-spa.conf /etc/nginx/conf.d/default.conf
+ENV PORT=8080
+COPY src/DigitalMenu.AdminPanel/nginx-spa.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
-EXPOSE 80
+EXPOSE 8080

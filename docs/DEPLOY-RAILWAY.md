@@ -55,8 +55,11 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
 ## 3. QR Menü servisi
 
 1. Yeni servis, aynı repo.
-2. **Root Directory:** `src/DigitalMenu.QrMenu`
-3. **Dockerfile Path:** `Dockerfile`
+2. **Settings → Build:**
+   - **Builder:** `Dockerfile`
+   - **Root Directory:** `src/DigitalMenu.QrMenu`
+   - **Dockerfile Path:** `Dockerfile`
+3. **Healthcheck:** `src/DigitalMenu.QrMenu/railway.toml` → `/health` (nginx `PORT` üzerinde dinler; kök `railway.json` artık `/health` içermez)
 4. **Build variables / Docker build args:**
 
    | Arg | Değer |
@@ -124,6 +127,7 @@ docker run --rm -p 8080:8080 `
 | `DigitalMen` / yanlış repo adı | Tam ad: **`fornaxdevteamyazilim/DigitalMenu`** (sonunda `u`) |
 | `railpack process exited with an error` | **Builder = Dockerfile**, Root *(boş)*, path `src/DigitalMenu.API/Dockerfile` |
 | `DigitalMenu.Infrastructure: not found` | Root Directory `src` iken context yanlış; Root’u **boş** bırakın (repo kökü) |
+| QR Menü / Admin **healthcheck failure** | nginx port 80’de kalmış veya `/health` yok; güncel Dockerfile `PORT` + `/health` kullanır. Root Directory QR için `src/DigitalMenu.QrMenu` olmalı |
 | API açılmıyor | `DATABASE_URL` veya Postgres referansı eksik |
 | CORS hatası | `CORS_ALLOWED_ORIGINS` eksik veya `https` uyumsuzluğu |
 | QR menü boş / hata | `VITE_API_BASE_URL` build sırasında set edilmemiş |
