@@ -1,5 +1,6 @@
 # API Railway servisi — Config file: railway.api.toml
-# Public URL: https://digitalmenu-production-72f0.up.railway.app
+# API: https://digitalmenu-production-72f0.up.railway.app
+# QrMenu__BaseUrl: https://triumphant-abundance-production-1cb2.up.railway.app/r
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "src/DigitalMenu.API/Dockerfile"

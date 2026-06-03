@@ -1,5 +1,6 @@
 # QR Menü Railway servisi — Config file: railway.qrmenu.toml
-# Build arg (Variables): VITE_API_BASE_URL=https://digitalmenu-production-72f0.up.railway.app
+# Public: https://triumphant-abundance-production-1cb2.up.railway.app
+# VITE_API_BASE_URL=https://digitalmenu-production-72f0.up.railway.app
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "src/DigitalMenu.QrMenu/Dockerfile"

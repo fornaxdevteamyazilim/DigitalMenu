@@ -7,6 +7,7 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
 | Servis | URL / not |
 |--------|-----------|
 | **API** | https://digitalmenu-production-72f0.up.railway.app |
+| **QR Menü** | https://triumphant-abundance-production-1cb2.up.railway.app |
 | **Health** | https://digitalmenu-production-72f0.up.railway.app/health |
 | Değişken listesi | [railway-production.md](./railway-production.md) |
 
@@ -46,13 +47,13 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
    |----------|----------|
    | `ASPNETCORE_ENVIRONMENT` | `Production` |
    | `DATABASE_URL` | Postgres eklentisinden `${{Postgres.DATABASE_URL}}` referansı |
-   | `QrMenu__BaseUrl` | `https://<qrmenu-host>/r` — seed ve mevcut masaların QR linkleri buna göre güncellenir |
-   | `CORS_ALLOWED_ORIGINS` | Virgülle ayrılmış: admin + qrmenu URL’leri |
+   | `QrMenu__BaseUrl` | `https://triumphant-abundance-production-1cb2.up.railway.app/r` |
+   | `CORS_ALLOWED_ORIGINS` | `https://triumphant-abundance-production-1cb2.up.railway.app,https://<admin-host>` |
 
    `CORS_ALLOWED_ORIGINS` örneği:
 
    ```
-   https://digitalmenu-admin.up.railway.app,https://digitalmenu-qrmenu.up.railway.app
+   https://triumphant-abundance-production-1cb2.up.railway.app,https://<admin-host>.up.railway.app
    ```
 
 4. Deploy sonrası **Settings → Networking → Generate Domain** ile API URL’sini alın (örn. `https://digitalmenu-api.up.railway.app`).
@@ -75,9 +76,9 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
    |-----|--------|
    | `VITE_API_BASE_URL` | `https://digitalmenu-production-72f0.up.railway.app` |
 
-5. Public domain oluşturun; bu URL’yi API’de `QrMenu__BaseUrl` olarak `https://<qrmenu-domain>/r` şeklinde güncelleyin.
+5. API’de `QrMenu__BaseUrl` = `https://triumphant-abundance-production-1cb2.up.railway.app/r` → API redeploy.
 
-QR örnek link: `https://<qrmenu-domain>/r/lezzet-duragi?table=Masa+1`
+QR örnek: https://triumphant-abundance-production-1cb2.up.railway.app/r/lezzet-duragi?table=Masa+1
 
 ## 4. Admin Panel servisi
 
