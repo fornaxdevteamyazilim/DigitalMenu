@@ -7,6 +7,7 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
 | Servis | URL / not |
 |--------|-----------|
 | **API** | https://digitalmenu-production-72f0.up.railway.app |
+| **Admin Panel** | https://natural-gentleness-production-c70d.up.railway.app |
 | **QR Menü** | https://triumphant-abundance-production-1cb2.up.railway.app |
 | **Health** | https://digitalmenu-production-72f0.up.railway.app/health |
 | Değişken listesi | [railway-production.md](./railway-production.md) |
@@ -48,13 +49,7 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
    | `ASPNETCORE_ENVIRONMENT` | `Production` |
    | `DATABASE_URL` | Postgres eklentisinden `${{Postgres.DATABASE_URL}}` referansı |
    | `QrMenu__BaseUrl` | `https://triumphant-abundance-production-1cb2.up.railway.app/r` |
-   | `CORS_ALLOWED_ORIGINS` | `https://triumphant-abundance-production-1cb2.up.railway.app,https://<admin-host>` |
-
-   `CORS_ALLOWED_ORIGINS` örneği:
-
-   ```
-   https://triumphant-abundance-production-1cb2.up.railway.app,https://<admin-host>.up.railway.app
-   ```
+   | `CORS_ALLOWED_ORIGINS` | `https://natural-gentleness-production-c70d.up.railway.app,https://triumphant-abundance-production-1cb2.up.railway.app` |
 
 4. Deploy sonrası **Settings → Networking → Generate Domain** ile API URL’sini alın (örn. `https://digitalmenu-api.up.railway.app`).
 5. Sağlık kontrolü: `GET /health` → `{ "status": "ok" }`.
@@ -147,3 +142,4 @@ docker run --rm -p 8080:8080 `
 | Admin API’ye bağlanamıyor | `API_BASE_URL` build arg yanlış; `wwwroot/appsettings.json` publish’te güncellenir |
 | SignalR kopuyor | API ve front aynı `https` origin politikası; CORS + credentials |
 | QR link `localhost:5173` | API’de `QrMenu__BaseUrl` = `https://<qrmenu-host>/r` ayarlayıp API’yi redeploy edin (masa URL’leri otomatik güncellenir) |
+| Admin **An unhandled error has occurred** | Admin’i yeniden deploy edin (wasm MIME + index.html). `https://<admin>/appsettings.json` ve `/_framework/blazor.webassembly*.js` 200 dönmeli |

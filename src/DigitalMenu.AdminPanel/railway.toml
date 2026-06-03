@@ -1,5 +1,6 @@
 # Admin Railway servisi — Config file: src/DigitalMenu.AdminPanel/railway.toml
-# Build arg: API_BASE_URL=https://digitalmenu-production-72f0.up.railway.app
+# Public: https://natural-gentleness-production-c70d.up.railway.app
+# API_BASE_URL=https://digitalmenu-production-72f0.up.railway.app
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "src/DigitalMenu.AdminPanel/Dockerfile"
