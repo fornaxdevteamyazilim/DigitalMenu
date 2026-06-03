@@ -13,6 +13,7 @@ RUN npm run build
 
 FROM nginx:alpine AS final
 ENV PORT=8080
-COPY nginx-spa.conf.template /etc/nginx/templates/default.conf.template
+COPY nginx-spa.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]

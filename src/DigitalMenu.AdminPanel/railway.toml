@@ -1,9 +1,9 @@
+# Admin Railway servisi: Root = repo kökü, Config file = src/DigitalMenu.AdminPanel/railway.toml
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "src/DigitalMenu.AdminPanel/Dockerfile"
 
-
 [deploy]
 healthcheckPath = "/health"
-healthcheckTimeout = 60
+healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

@@ -31,7 +31,7 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
    - **Root Directory:** *(boş bırakın — repo kökü)*  
      `src` yaparsanız `DigitalMenu.Infrastructure: not found` hatası alırsınız; Dockerfile repo kökünden derlenir.
    - **Dockerfile Path:** `src/DigitalMenu.API/Dockerfile`
-   - Kök `railway.json` builder’ı `DOCKERFILE` olarak sabitler.
+   - **Config file:** `railway.api.toml` (repo kökü — Admin/QR ile karışmasın diye kök `railway.json` kullanılmıyor)
 3. **Variables** (örnek):
 
    | Değişken | Açıklama |
@@ -59,7 +59,7 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
    - **Builder:** `Dockerfile`
    - **Root Directory:** `src/DigitalMenu.QrMenu`
    - **Dockerfile Path:** `Dockerfile`
-3. **Healthcheck:** `src/DigitalMenu.QrMenu/railway.toml` → `/health` (nginx `PORT` üzerinde dinler; kök `railway.json` artık `/health` içermez)
+3. **Config file:** `src/DigitalMenu.QrMenu/railway.toml` (healthcheck `/health`, nginx port **8080**)
 4. **Build variables / Docker build args:**
 
    | Arg | Değer |
@@ -76,7 +76,9 @@ QR örnek link: `https://<qrmenu-domain>/r/lezzet-duragi?table=Masa+1`
    - **Builder:** `Dockerfile`
    - **Root Directory:** *(boş — repo kökü)*
    - **Dockerfile Path:** `src/DigitalMenu.AdminPanel/Dockerfile`
-2. **Docker build arg:**
+   - **Config file:** `src/DigitalMenu.AdminPanel/railway.toml` *(zorunlu — yoksa kök `railway.api.toml` API Dockerfile’ını kullanır ve healthcheck düşer)*
+2. **Settings → Deploy → Healthcheck Path:** `/health` (config dosyasından da gelir)
+3. **Docker build arg:**
 
    | Arg | Değer |
    |-----|--------|
@@ -127,7 +129,7 @@ docker run --rm -p 8080:8080 `
 | `DigitalMen` / yanlış repo adı | Tam ad: **`fornaxdevteamyazilim/DigitalMenu`** (sonunda `u`) |
 | `railpack process exited with an error` | **Builder = Dockerfile**, Root *(boş)*, path `src/DigitalMenu.API/Dockerfile` |
 | `DigitalMenu.Infrastructure: not found` | Root Directory `src` iken context yanlış; Root’u **boş** bırakın (repo kökü) |
-| QR Menü / Admin **healthcheck failure** | nginx port 80’de kalmış veya `/health` yok; güncel Dockerfile `PORT` + `/health` kullanır. Root Directory QR için `src/DigitalMenu.QrMenu` olmalı |
+| QR Menü / Admin **healthcheck failure** | nginx **8080** + `/health`; Admin’de **Config file** = `src/DigitalMenu.AdminPanel/railway.toml`. Kök `railway.json` tüm servislere API build’i uygular — kullanmayın |
 | API açılmıyor | `DATABASE_URL` veya Postgres referansı eksik |
 | CORS hatası | `CORS_ALLOWED_ORIGINS` eksik veya `https` uyumsuzluğu |
 | QR menü boş / hata | `VITE_API_BASE_URL` build sırasında set edilmemiş |
