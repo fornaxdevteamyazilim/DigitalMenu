@@ -43,9 +43,9 @@ Deploy sonrası public URL’yi alın → API’de `QrMenu__BaseUrl` = `https://
 | Dockerfile | `src/DigitalMenu.AdminPanel/Dockerfile` |
 | Root Directory | *(boş)* |
 
-| Build arg | Değer |
-|-----------|--------|
-| `API_BASE_URL` | `https://digitalmenu-production-72f0.up.railway.app` |
+| Build arg / Variable | Değer |
+|----------------------|--------|
+| `API_BASE_URL` | `https://digitalmenu-production-72f0.up.railway.app` (build **ve** runtime — container start’ta `appsettings.json` güncellenir) |
 
 Deploy sonrası public URL’yi `CORS_ALLOWED_ORIGINS` listesine ekleyip **API’yi yeniden deploy** edin.
 

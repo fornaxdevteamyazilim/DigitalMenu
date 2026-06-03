@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
@@ -9,12 +8,16 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-var configHttp = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
-var clientSettings = await configHttp.GetFromJsonAsync<ClientAppSettings>("appsettings.json")
-    ?? new ClientAppSettings();
-var apiBaseUrl = (clientSettings.ApiBaseUrl ?? "https://localhost:7182").TrimEnd('/');
-builder.Services.AddSingleton(new ApiSettings { BaseUrl = apiBaseUrl });
+// CreateDefault loads wwwroot/appsettings.json + appsettings.{Environment}.json
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"]?.TrimEnd('/');
+if (string.IsNullOrEmpty(apiBaseUrl))
+{
+    apiBaseUrl = builder.HostEnvironment.IsDevelopment()
+        ? "https://localhost:7182"
+        : "https://digitalmenu-production-72f0.up.railway.app";
+}
 
+builder.Services.AddSingleton(new ApiSettings { BaseUrl = apiBaseUrl });
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<ApiService>();
 builder.Services.AddMudServices();

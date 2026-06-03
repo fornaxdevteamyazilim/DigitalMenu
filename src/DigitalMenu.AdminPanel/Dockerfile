@@ -13,13 +13,16 @@ COPY src/DigitalMenu.AdminPanel/ DigitalMenu.AdminPanel/
 COPY src/DigitalMenu.Core/ DigitalMenu.Core/
 
 ARG API_BASE_URL=https://digitalmenu-production-72f0.up.railway.app
-RUN printf '{\n  "ApiBaseUrl": "%s"\n}\n' "$API_BASE_URL" > DigitalMenu.AdminPanel/wwwroot/appsettings.json \
+RUN API_URL="${API_BASE_URL%/}" \
+    && printf '%s\n' "{\"ApiBaseUrl\":\"${API_URL}\"}" > DigitalMenu.AdminPanel/wwwroot/appsettings.Production.json \
     && dotnet publish "DigitalMenu.AdminPanel/DigitalMenu.AdminPanel.csproj" -c Release -o /app/publish
 
 FROM nginx:alpine AS final
-# Railway healthcheck ve proxy varsayılan olarak 8080 kullanır
 ENV PORT=8080
+ENV API_BASE_URL=https://digitalmenu-production-72f0.up.railway.app
 COPY src/DigitalMenu.AdminPanel/nginx-spa.conf /etc/nginx/conf.d/default.conf
+COPY src/DigitalMenu.AdminPanel/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
 EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
