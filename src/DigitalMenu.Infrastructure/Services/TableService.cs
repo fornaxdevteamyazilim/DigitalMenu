@@ -24,7 +24,7 @@ public class TableService : ITableService
         if (string.IsNullOrEmpty(tenantId))
             throw new Exception("İşletme bilgisi doğrulanamadı.");
 
-        var qrCodeUrl = $"{_qrMenuBaseUrl}/{tenantId}?table={Uri.EscapeDataString(tableNumber)}";
+        var qrCodeUrl = QrMenuUrlBuilder.Build(_qrMenuBaseUrl, tenantId, tableNumber);
 
         var table = new Table
         {

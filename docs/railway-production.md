@@ -10,7 +10,7 @@ Aşağıdaki değişkenleri Railway dashboard → ilgili servis → **Variables*
 |----------|--------|
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (Postgres eklentisi referansı) |
-| `QrMenu__BaseUrl` | QR menü domain’i belli olunca: `https://<qrmenu-host>/r` |
+| `QrMenu__BaseUrl` | `https://<qrmenu-host>/r` — **zorunlu** (ör. `https://digitalmenu-qrmenu.up.railway.app/r`). API her açılışta localhost QR linklerini buna çevirir. |
 | `CORS_ALLOWED_ORIGINS` | Admin + QR public URL’leri (virgülle, `https` ile) |
 
 `CORS_ALLOWED_ORIGINS` örneği (domain’leri kendi Railway URL’lerinizle değiştirin):

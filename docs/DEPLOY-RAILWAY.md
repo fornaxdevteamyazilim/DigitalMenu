@@ -46,7 +46,7 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
    |----------|----------|
    | `ASPNETCORE_ENVIRONMENT` | `Production` |
    | `DATABASE_URL` | Postgres eklentisinden `${{Postgres.DATABASE_URL}}` referansı |
-   | `QrMenu__BaseUrl` | QR menü public URL, örn. `https://digitalmenu-qrmenu.up.railway.app/r` |
+   | `QrMenu__BaseUrl` | `https://<qrmenu-host>/r` — seed ve mevcut masaların QR linkleri buna göre güncellenir |
    | `CORS_ALLOWED_ORIGINS` | Virgülle ayrılmış: admin + qrmenu URL’leri |
 
    `CORS_ALLOWED_ORIGINS` örneği:
@@ -145,3 +145,4 @@ docker run --rm -p 8080:8080 `
 | QR menü boş / hata | `VITE_API_BASE_URL` build sırasında set edilmemiş |
 | Admin API’ye bağlanamıyor | `API_BASE_URL` build arg yanlış; `wwwroot/appsettings.json` publish’te güncellenir |
 | SignalR kopuyor | API ve front aynı `https` origin politikası; CORS + credentials |
+| QR link `localhost:5173` | API’de `QrMenu__BaseUrl` = `https://<qrmenu-host>/r` ayarlayıp API’yi redeploy edin (masa URL’leri otomatik güncellenir) |

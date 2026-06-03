@@ -385,8 +385,9 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<AppDbContext>();
-        await DbInitializer.SeedAsync(context);
-        Console.WriteLine("--> Veritabanı kontrol edildi ve Seed veriler başarıyla yüklendi.");
+        var configuration = services.GetRequiredService<IConfiguration>();
+        await DbInitializer.SeedAsync(context, configuration);
+        Console.WriteLine("--> Veritabanı kontrol edildi; seed / QR URL güncellemesi tamamlandı.");
     }
     catch (Exception ex)
     {

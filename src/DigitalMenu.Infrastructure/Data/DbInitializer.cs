@@ -1,5 +1,7 @@
 using DigitalMenu.Core.Models;
+using DigitalMenu.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace DigitalMenu.Infrastructure.Data;
 
@@ -14,16 +16,17 @@ namespace DigitalMenu.Infrastructure.Data;
 /// </remarks>
 public static class DbInitializer
 {
-    public static async Task SeedAsync(AppDbContext context)
+    public static async Task SeedAsync(AppDbContext context, IConfiguration configuration)
     {
         await context.Database.MigrateAsync();
+
+        var qrBaseUrl = ResolveQrMenuBaseUrl(configuration);
 
         // ITenantProvider boşken global filter devreye girer; tenant var mı kontrolü filtresiz yapılır
         if (!await context.Tenants.IgnoreQueryFilters().AnyAsync())
         {
             var defaultTenant = new Tenant
             {
-                // Seed'de ITenantProvider yok — slug manuel atanır
                 TenantId = "lezzet-duragi",
                 Name = "Lezzet Durağı Restoranı",
                 LogoUrl = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200",
@@ -107,18 +110,58 @@ public static class DbInitializer
 
             await context.Products.AddRangeAsync(products);
 
-            var tables = new List<Table>
+            var tables = new[]
             {
-                new() { TableNumber = "Masa 1", QrCodeUrl = "http://localhost:5173/r/lezzet-duragi?table=Masa+1", TenantId = "lezzet-duragi" },
-                new() { TableNumber = "Masa 2", QrCodeUrl = "http://localhost:5173/r/lezzet-duragi?table=Masa+2", TenantId = "lezzet-duragi" },
-                new() { TableNumber = "Masa 3", QrCodeUrl = "http://localhost:5173/r/lezzet-duragi?table=Masa+3", TenantId = "lezzet-duragi" },
-                new() { TableNumber = "Bahçe 1", QrCodeUrl = "http://localhost:5173/r/lezzet-duragi?table=Bahce+1", TenantId = "lezzet-duragi" },
-                new() { TableNumber = "Bahçe 2", QrCodeUrl = "http://localhost:5173/r/lezzet-duragi?table=Bahce+2", TenantId = "lezzet-duragi" }
-            };
+                "Masa 1", "Masa 2", "Masa 3", "Bahçe 1", "Bahçe 2"
+            }.Select(name => new Table
+            {
+                TableNumber = name,
+                QrCodeUrl = QrMenuUrlBuilder.Build(qrBaseUrl, "lezzet-duragi", name),
+                TenantId = "lezzet-duragi"
+            }).ToList();
 
             await context.Tables.AddRangeAsync(tables);
-
             await context.SaveChangesAsync();
         }
+
+        await RefreshQrCodeUrlsAsync(context, configuration);
+    }
+
+    /// <summary>
+    /// Production'da QrMenu__BaseUrl set edildiğinde eski localhost QR linklerini günceller.
+    /// </summary>
+    public static async Task RefreshQrCodeUrlsAsync(AppDbContext context, IConfiguration configuration)
+    {
+        var qrBaseUrl = configuration["QrMenu:BaseUrl"]?.TrimEnd('/');
+        if (QrMenuUrlBuilder.IsLocalhostBase(qrBaseUrl))
+            return;
+
+        var tables = await context.Tables.IgnoreQueryFilters().ToListAsync();
+        var updated = 0;
+
+        foreach (var table in tables)
+        {
+            if (string.IsNullOrEmpty(table.TenantId))
+                continue;
+
+            var newUrl = QrMenuUrlBuilder.Build(qrBaseUrl!, table.TenantId, table.TableNumber);
+            if (table.QrCodeUrl == newUrl)
+                continue;
+
+            table.QrCodeUrl = newUrl;
+            updated++;
+        }
+
+        if (updated > 0)
+            await context.SaveChangesAsync();
+    }
+
+    private static string ResolveQrMenuBaseUrl(IConfiguration configuration)
+    {
+        var configured = configuration["QrMenu:BaseUrl"]?.TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(configured))
+            return configured;
+
+        return "http://localhost:5173/r";
     }
 }
