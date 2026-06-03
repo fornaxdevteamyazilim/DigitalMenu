@@ -17,12 +17,20 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
 2. **Add Plugin → PostgreSQL** ekleyin.
 3. API servisini oluşturmadan önce Postgres’in `DATABASE_URL` değerini not edin (otomatik enjekte edilir).
 
+### GitHub bağlantısı
+
+- Repo: `https://github.com/fornaxdevteamyazilim/DigitalMenu` (**public**; varsayılan dal: **`main`**).
+- **New → GitHub Repo** kullanın; repoyu listeden seçin (önce Railway hesabınıza GitHub yetkisi verin). Ham URL yapıştırma yerine bu yol önerilir.
+- Repoyu private tutmak isterseniz: Railway’de **Account Settings → GitHub** ile uygulamayı bağlayıp repoyu listeden seçin (URL yapıştırmayın). Private repo + URL yapıştırma çalışmaz.
+
 ## 2. API servisi
 
-1. **New Service → GitHub Repo** → bu repoyu seçin.
-2. Servis ayarları:
+1. **New Service → GitHub Repo** → `fornaxdevteamyazilim/DigitalMenu` repoyu seçin.
+2. **Settings → Build** (önemli — Railpack hatasını önler):
+   - **Builder:** `Dockerfile` (Railpack / Nixpacks değil)
    - **Root Directory:** `src`
    - **Dockerfile Path:** `DigitalMenu.API/Dockerfile`
+   - Repoda `src/railway.toml` ve kök `railway.json` builder’ı `DOCKERFILE` olarak sabitler; deploy logunda `Using Dockerfile` görmelisiniz.
 3. **Variables** (örnek):
 
    | Değişken | Açıklama |
@@ -60,9 +68,12 @@ QR örnek link: `https://<qrmenu-domain>/r/lezzet-duragi?table=Masa+1`
 
 ## 4. Admin Panel servisi
 
-1. Yeni servis, **Root Directory:** `src`
-2. **Dockerfile Path:** `DigitalMenu.AdminPanel/Dockerfile`
-3. **Docker build arg:**
+1. Yeni servis, **Settings → Build:**
+   - **Builder:** `Dockerfile`
+   - **Root Directory:** `src`
+   - **Dockerfile Path:** `DigitalMenu.AdminPanel/Dockerfile`
+   - (İsteğe bağlı) **Config file:** `src/DigitalMenu.AdminPanel/railway.toml` — API’nin `src/railway.toml` dosyasından ayrılsın diye
+2. **Docker build arg:**
 
    | Arg | Değer |
    |-----|--------|
@@ -108,6 +119,10 @@ docker run --rm -p 8080:8080 `
 
 | Belirti | Olası neden |
 |---------|-------------|
+| “Only public repositories can be added using the GitHub URL” | Repo private veya URL yapıştırılıyor; repoyu public yapın veya GitHub uygulamasıyla listeden seçin |
+| “Branch 'main' not found” | Railway’de **Branch** alanını `main` yapın (repo `master` kullanıyorsa önce GitHub’da `main` dalına geçin) |
+| `DigitalMen` / yanlış repo adı | Tam ad: **`fornaxdevteamyazilim/DigitalMenu`** (sonunda `u`) |
+| `railpack process exited with an error` | Railway Railpack ile derliyor; **Builder = Dockerfile**, Root `src`, path `DigitalMenu.API/Dockerfile`. Son commit’i çekip redeploy edin. Logda `Railpack` yerine `Dockerfile` görünmeli |
 | API açılmıyor | `DATABASE_URL` veya Postgres referansı eksik |
 | CORS hatası | `CORS_ALLOWED_ORIGINS` eksik veya `https` uyumsuzluğu |
 | QR menü boş / hata | `VITE_API_BASE_URL` build sırasında set edilmemiş |

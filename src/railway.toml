@@ -1,0 +1,9 @@
+# API servisi: Root Directory = "src" iken Railpack yerine Dockerfile kullan.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "DigitalMenu.API/Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
