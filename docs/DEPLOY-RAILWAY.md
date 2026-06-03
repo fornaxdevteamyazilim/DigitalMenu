@@ -8,7 +8,7 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
 |--------|-----------|------------------------|------------|
 | `digitalmenu-api` | ASP.NET Core 10 | *(boş — repo kökü)* | `src/DigitalMenu.API/Dockerfile` |
 | `digitalmenu-admin` | Blazor WASM + nginx | *(boş — repo kökü)* | `src/DigitalMenu.AdminPanel/Dockerfile` |
-| `digitalmenu-qrmenu` | Vue + nginx | `src/DigitalMenu.QrMenu` | `Dockerfile` |
+| `digitalmenu-qrmenu` | Vue + nginx | *(boş — repo kökü)* | `src/DigitalMenu.QrMenu/Dockerfile` |
 | PostgreSQL | Eklenti | — | — |
 
 ## 1. Railway projesi ve veritabanı
@@ -57,9 +57,10 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
 1. Yeni servis, aynı repo.
 2. **Settings → Build:**
    - **Builder:** `Dockerfile`
-   - **Root Directory:** `src/DigitalMenu.QrMenu`
-   - **Dockerfile Path:** `Dockerfile`
-3. **Config file:** `src/DigitalMenu.QrMenu/railway.toml` (healthcheck `/health`, nginx port **8080**)
+   - **Root Directory:** *(boş — repo kökü)*  
+     `src/DigitalMenu.QrMenu` yaparsanız `couldn't locate Dockerfile` hatası alırsınız.
+   - **Dockerfile Path:** `src/DigitalMenu.QrMenu/Dockerfile`
+   - **Config file:** `railway.qrmenu.toml`
 4. **Build variables / Docker build args:**
 
    | Arg | Değer |
@@ -129,7 +130,8 @@ docker run --rm -p 8080:8080 `
 | `DigitalMen` / yanlış repo adı | Tam ad: **`fornaxdevteamyazilim/DigitalMenu`** (sonunda `u`) |
 | `railpack process exited with an error` | **Builder = Dockerfile**, Root *(boş)*, path `src/DigitalMenu.API/Dockerfile` |
 | `DigitalMenu.Infrastructure: not found` | Root Directory `src` iken context yanlış; Root’u **boş** bırakın (repo kökü) |
-| QR Menü / Admin **healthcheck failure** | nginx **8080** + `/health`; Admin’de **Config file** = `src/DigitalMenu.AdminPanel/railway.toml`. Kök `railway.json` tüm servislere API build’i uygular — kullanmayın |
+| QR Menü / Admin **healthcheck failure** | nginx **8080** + `/health`; Admin’de **Config file** = `src/DigitalMenu.AdminPanel/railway.toml` |
+| `couldn't locate the dockerfile at path Dockerfile` | QR Root’u **boş** bırakın; Dockerfile = `src/DigitalMenu.QrMenu/Dockerfile`, Config = `railway.qrmenu.toml` |
 | API açılmıyor | `DATABASE_URL` veya Postgres referansı eksik |
 | CORS hatası | `CORS_ALLOWED_ORIGINS` eksik veya `https` uyumsuzluğu |
 | QR menü boş / hata | `VITE_API_BASE_URL` build sırasında set edilmemiş |

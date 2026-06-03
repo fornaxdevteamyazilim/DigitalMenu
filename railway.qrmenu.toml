@@ -1,4 +1,4 @@
-# QR Menü: Root = repo kökü, Config file = railway.qrmenu.toml (veya bu dosya)
+# Yalnızca QR Menü Railway servisi için (Settings → Config file: railway.qrmenu.toml)
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "src/DigitalMenu.QrMenu/Dockerfile"
