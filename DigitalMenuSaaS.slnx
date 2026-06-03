@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DigitalMenu.AdminPanel/DigitalMenu.AdminPanel.csproj" />
+    <Project Path="src/DigitalMenu.API/DigitalMenu.API.csproj" />
+    <Project Path="src/DigitalMenu.Client/DigitalMenu.Client.csproj" />
+    <Project Path="src/DigitalMenu.Core/DigitalMenu.Core.csproj" />
+    <Project Path="src/DigitalMenu.Infrastructure/DigitalMenu.Infrastructure.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,33 @@
+@namespace QRCoder.Blazor
+
+@if (!string.IsNullOrEmpty(_imageSource))
+{
+    <img src="@_imageSource" alt="@Alt" style="@Style" width="@Size" height="@Size" class="@Class" />
+}
+
+@code {
+    [Parameter] public string? Data { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public int Size { get; set; } = 150;
+    [Parameter] public string Alt { get; set; } = "QR Code";
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    private string? _imageSource;
+    private string? EffectiveData => Value ?? Data;
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(EffectiveData))
+        {
+            _imageSource = null;
+            return;
+        }
+
+        using var generator = new global::QRCoder.QRCodeGenerator();
+        using var qrData = generator.CreateQrCode(EffectiveData, global::QRCoder.QRCodeGenerator.ECCLevel.Q);
+        var png = new global::QRCoder.PngByteQRCode(qrData);
+        var bytes = png.GetGraphic(5);
+        _imageSource = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+    }
+}

@@ -1,0 +1,434 @@
+@page "/tables"
+@using System.Text.Json.Serialization
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.JSInterop
+@inject ApiService ApiService
+@inject ApiSettings Api
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<MudText Typo="Typo.h4" Class="mb-4">Masa & QR Kod Yönetimi</MudText>
+
+@if (!_audioReady)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true">
+        Sesli uyarılar için sayfada bir kez tıklayın veya
+        <MudButton Variant="Variant.Text" Color="Color.Inherit" Size="Size.Small" OnClick="EnableAlertsAsync">
+            sesi etkinleştir
+        </MudButton>
+        (tarayıcı arka planda da uyarı verebilsin).
+    </MudAlert>
+}
+
+<MudPaper Class="pa-4 mb-6" Elevation="2">
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <MudTextField @bind-Value="_newTableNumber"
+                          Label="Masa Adı / Numarası"
+                          Placeholder="Örn: Masa 15, Bahçe 3, VIP"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddNewTable"
+                       FullWidth="true"
+                       Disabled="_isProcessing">
+                Masa Oluştur
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_tables == null)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+}
+else if (!_tables.Any())
+{
+    <MudAlert Severity="Severity.Info">Henüz tanımlı bir masa bulunmuyor. Yukarıdaki alandan ilk masanızı ekleyebilirsiniz.</MudAlert>
+}
+else
+{
+    <MudGrid>
+        @foreach (var table in _tables)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard Elevation="3" Class="@GetTableCardClass(table)">
+                    <MudCardContent Class="text-center pa-2">
+                        <MudText Typo="Typo.h6" Class="@GetTableTitleClass(table)">@table.TableNumber</MudText>
+
+                        <div class="d-flex justify-center my-3 pa-2 bg-white rounded">
+                            <QRCode Value="@table.QrCodeUrl" Class="qr-code-img" Style="width:160px; height:160px;" />
+                        </div>
+
+                        <div class="d-flex justify-center gap-2 mt-2 flex-wrap">
+                            @if (table.IsWaiterCalled)
+                            {
+                                <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">
+                                    Garson Çağırıyor
+                                </MudChip>
+                            }
+                            @if (table.IsBillRequested)
+                            {
+                                <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">
+                                    Hesap İstiyor
+                                </MudChip>
+                            }
+                        </div>
+                    </MudCardContent>
+                    <MudCardActions Class="justify-center flex-wrap gap-1 pa-2">
+                        @if (table.IsWaiterCalled)
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                       Disabled="_dismissingTableId == table.Id"
+                                       OnClick="@(() => DismissWaiterCallAsync(table))">
+                                Çağrıyı Kapat
+                            </MudButton>
+                        }
+                        @if (table.IsBillRequested)
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Warning"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                       Disabled="_dismissingTableId == table.Id"
+                                       OnClick="@(() => DismissBillRequestAsync(table))">
+                                Hesabı Kapat
+                            </MudButton>
+                        }
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.OpenInNew"
+                                   Href="@table.QrCodeUrl"
+                                   Target="_blank"
+                                   Size="Size.Small">
+                            Test Et
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private const string WaiterNotificationTag = "waiter-call";
+    private const string BillNotificationTag = "bill-request";
+
+    private List<Table>? _tables;
+    private string _newTableNumber = string.Empty;
+    private bool _isProcessing;
+    private bool _audioReady;
+    private Guid? _dismissingTableId;
+    private HubConnection? _hubConnection;
+    private readonly HashSet<Guid> _waiterAlertTableIds = [];
+    private readonly HashSet<Guid> _billAlertTableIds = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTables();
+        SyncAlertsFromTables();
+        await ConnectToHub();
+        await RefreshAudioReadyAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshAudioReadyAsync();
+        }
+    }
+
+    private async Task EnableAlertsAsync()
+    {
+        await JS.InvokeVoidAsync("staffAlerts.unlock");
+        await JS.InvokeVoidAsync("staffAlerts.requestNotificationPermission");
+        await RefreshAudioReadyAsync();
+        Snackbar.Add("Sesli ve masaüstü uyarılar etkinleştirildi.", Severity.Success);
+    }
+
+    private async Task RefreshAudioReadyAsync()
+    {
+        try
+        {
+            _audioReady = await JS.InvokeAsync<bool>("staffAlerts.isUnlocked");
+            StateHasChanged();
+        }
+        catch
+        {
+            _audioReady = false;
+        }
+    }
+
+    private string GetTableCardClass(Table table)
+    {
+        if (_waiterAlertTableIds.Contains(table.Id)) return "table-waiter-alert";
+        if (_billAlertTableIds.Contains(table.Id)) return "table-bill-alert";
+        return string.Empty;
+    }
+
+    private string GetTableTitleClass(Table table)
+    {
+        if (_waiterAlertTableIds.Contains(table.Id)) return "table-waiter-alert-title mb-2";
+        if (_billAlertTableIds.Contains(table.Id)) return "table-bill-alert-title mb-2";
+        return "mb-2";
+    }
+
+    private void SyncAlertsFromTables()
+    {
+        if (_tables == null) return;
+
+        _waiterAlertTableIds.Clear();
+        _billAlertTableIds.Clear();
+
+        foreach (var table in _tables)
+        {
+            if (table.IsWaiterCalled) _waiterAlertTableIds.Add(table.Id);
+            if (table.IsBillRequested) _billAlertTableIds.Add(table.Id);
+        }
+
+        _ = JS.InvokeVoidAsync("staffAlerts.syncWaiterAlertCount", _waiterAlertTableIds.Count);
+        _ = JS.InvokeVoidAsync("staffAlerts.syncBillAlertCount", _billAlertTableIds.Count);
+    }
+
+    private async Task SyncAlertCountsToJsAsync()
+    {
+        await JS.InvokeVoidAsync("staffAlerts.syncWaiterAlertCount", _waiterAlertTableIds.Count);
+        await JS.InvokeVoidAsync("staffAlerts.syncBillAlertCount", _billAlertTableIds.Count);
+    }
+
+    private async Task ConnectToHub()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{Api.BaseUrl}/hubs/menu")
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On<WaiterCallPayload>("ReceiveWaiterCall", payload =>
+            {
+                _ = HandleWaiterCallAsync(payload);
+            });
+
+            _hubConnection.On<BillRequestPayload>("ReceiveBillRequest", payload =>
+            {
+                _ = HandleBillRequestAsync(payload);
+            });
+
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("JoinRestoranGroup", ApiService.CurrentTenantId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Canlı bildirim bağlantısı kurulamadı: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    private async Task HandleWaiterCallAsync(WaiterCallPayload payload)
+    {
+        var table = _tables?.FirstOrDefault(t => t.Id == payload.TableId);
+        var wasCalled = table?.IsWaiterCalled ?? false;
+
+        if (table is not null)
+        {
+            table.IsWaiterCalled = payload.IsWaiterCalled;
+        }
+
+        if (payload.IsWaiterCalled)
+        {
+            _waiterAlertTableIds.Add(payload.TableId);
+
+            if (!wasCalled)
+            {
+                var label = payload.TableNumber ?? table?.TableNumber ?? "Masa";
+                var title = "🔔 Garson çağrısı";
+                var body = $"{label} garson istiyor!";
+
+                await JS.InvokeVoidAsync("staffAlerts.playWaiterAlert");
+                await JS.InvokeVoidAsync("staffAlerts.showNotification", title, body, WaiterNotificationTag);
+                Snackbar.Add(payload.Message ?? body, Severity.Error, config => config.VisibleStateDuration = 8000);
+            }
+        }
+        else
+        {
+            _waiterAlertTableIds.Remove(payload.TableId);
+            await JS.InvokeVoidAsync("staffAlerts.closeNotification", WaiterNotificationTag);
+        }
+
+        await SyncAlertCountsToJsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleBillRequestAsync(BillRequestPayload payload)
+    {
+        var table = _tables?.FirstOrDefault(t => t.Id == payload.TableId);
+        var wasRequested = table?.IsBillRequested ?? false;
+
+        if (table is not null)
+        {
+            table.IsBillRequested = payload.IsBillRequested;
+        }
+
+        if (payload.IsBillRequested)
+        {
+            _billAlertTableIds.Add(payload.TableId);
+
+            if (!wasRequested)
+            {
+                var label = payload.TableNumber ?? table?.TableNumber ?? "Masa";
+                var title = "💳 Hesap isteği";
+                var body = $"{label} hesap istiyor!";
+
+                await JS.InvokeVoidAsync("staffAlerts.playBillAlert");
+                await JS.InvokeVoidAsync("staffAlerts.showNotification", title, body, BillNotificationTag);
+                Snackbar.Add(payload.Message ?? body, Severity.Warning, config => config.VisibleStateDuration = 8000);
+            }
+        }
+        else
+        {
+            _billAlertTableIds.Remove(payload.TableId);
+            await JS.InvokeVoidAsync("staffAlerts.closeNotification", BillNotificationTag);
+        }
+
+        await SyncAlertCountsToJsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DismissWaiterCallAsync(Table table)
+    {
+        await PostNotificationAsync(
+            $"{Api.BaseUrl}/api/notifications/waiter-call?tableId={table.Id}&isCalled=false",
+            table,
+            "Garson çağrısı kapatıldı.",
+            onSuccess: () =>
+            {
+                table.IsWaiterCalled = false;
+                _waiterAlertTableIds.Remove(table.Id);
+            });
+    }
+
+    private async Task DismissBillRequestAsync(Table table)
+    {
+        await PostNotificationAsync(
+            $"{Api.BaseUrl}/api/notifications/bill-request?tableId={table.Id}&isRequested=false",
+            table,
+            "Hesap isteği kapatıldı.",
+            onSuccess: () =>
+            {
+                table.IsBillRequested = false;
+                _billAlertTableIds.Remove(table.Id);
+            });
+    }
+
+    private async Task PostNotificationAsync(string url, Table table, string successMessage, Action onSuccess)
+    {
+        _dismissingTableId = table.Id;
+        try
+        {
+            var response = await ApiService.PostEmptyAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                onSuccess();
+                await SyncAlertCountsToJsAsync();
+                Snackbar.Add($"{table.TableNumber}: {successMessage}", Severity.Success);
+                // SignalR diğer panellere de yayar; bu oturumda anında güncelle
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add("İşlem başarısız oldu.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Bağlantı hatası: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _dismissingTableId = null;
+        }
+    }
+
+    private async Task LoadTables()
+    {
+        try
+        {
+            _tables = await ApiService.GetAsync<Table>($"{Api.BaseUrl}/api/tables");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Masalar yüklenirken hata oluştu: {ex.Message}", Severity.Error);
+            _tables = [];
+        }
+    }
+
+    private async Task AddNewTable()
+    {
+        if (string.IsNullOrWhiteSpace(_newTableNumber))
+        {
+            Snackbar.Add("Lütfen geçerli bir masa adı girin.", Severity.Warning);
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            var url = $"{Api.BaseUrl}/api/tables?tableNumber={Uri.EscapeDataString(_newTableNumber.Trim())}";
+            var response = await ApiService.PostEmptyAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"{_newTableNumber.Trim()} başarıyla oluşturuldu.", Severity.Success);
+                _newTableNumber = string.Empty;
+                await LoadTables();
+                SyncAlertsFromTables();
+            }
+            else
+            {
+                Snackbar.Add("Masa eklenirken bir hata meydana geldi.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Bağlantı hatası: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await JS.InvokeVoidAsync("staffAlerts.stopTitleFlash");
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+    private class WaiterCallPayload
+    {
+        [JsonPropertyName("tableId")] public Guid TableId { get; set; }
+        [JsonPropertyName("tableNumber")] public string? TableNumber { get; set; }
+        [JsonPropertyName("isWaiterCalled")] public bool IsWaiterCalled { get; set; }
+        [JsonPropertyName("message")] public string? Message { get; set; }
+    }
+
+    private class BillRequestPayload
+    {
+        [JsonPropertyName("tableId")] public Guid TableId { get; set; }
+        [JsonPropertyName("tableNumber")] public string? TableNumber { get; set; }
+        [JsonPropertyName("isBillRequested")] public bool IsBillRequested { get; set; }
+        [JsonPropertyName("message")] public string? Message { get; set; }
+    }
+}

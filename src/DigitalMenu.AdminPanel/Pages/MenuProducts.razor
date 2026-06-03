@@ -1,0 +1,194 @@
+@page "/menu"
+@inject ApiService ApiService
+@inject ApiSettings Api
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudText Typo="Typo.h4" Class="mb-4">Menü Ürünleri Yönetimi</MudText>
+
+@if (_categories == null)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+}
+else if (!_categories.Any())
+{
+    <MudAlert Severity="Severity.Warning">Henüz menü verisi bulunamadı. Lütfen önce Trendyol entegrasyonunu çalıştırın.</MudAlert>
+}
+else
+{
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+        @foreach (var category in _categories)
+        {
+            <MudTabPanel Text="@category.Name">
+                <div class="pa-6">
+                    <MudTable Items="@category.Products" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isSaving" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Görsel</MudTh>
+                            <MudTh>Ürün Adı</MudTh>
+                            <MudTh>Açıklama</MudTh>
+                            <MudTh>Özellikler</MudTh>
+                            <MudTh>Trendyol Fiyatı</MudTh>
+                            <MudTh>Menü Satış Fiyatı (Düzenlenebilir)</MudTh>
+                            <MudTh>Durum</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Görsel">
+                                <img src="@(string.IsNullOrEmpty(context.ImageUrl) ? DefaultProductImage : context.ImageUrl)"
+                                     onerror="this.onerror=null;this.src='@DefaultProductImage';"
+                                     width="60" height="60" alt="@context.Name"
+                                     class="rounded-lg" style="object-fit:cover;display:block;" />
+                            </MudTd>
+                            <MudTd DataLabel="Ürün Adı"><b>@context.Name</b></MudTd>
+                            <MudTd DataLabel="Açıklama">
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary">@context.Description</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Özellikler">
+                                <div class="d-flex flex-column gap-1">
+                                    @if (context.RemovableIngredients.Count == 0 && context.ExtraSauces.Count == 0)
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Tanımlı değil</MudText>
+                                    }
+                                    else
+                                    {
+                                        @if (context.RemovableIngredients.Count > 0)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                                @context.RemovableIngredients.Count çıkarılabilir
+                                            </MudChip>
+                                        }
+                                        @if (context.ExtraSauces.Count > 0)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                                @context.ExtraSauces.Count ekstra
+                                            </MudChip>
+                                        }
+                                    }
+                                    <MudButton Variant="Variant.Outlined"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Tune"
+                                               OnClick="@(() => OpenProductOptions(context))">
+                                        Düzenle
+                                    </MudButton>
+                                </div>
+                            </MudTd>
+                            <MudTd DataLabel="Trendyol Fiyatı">@context.OriginalPrice.ToString("C2")</MudTd>
+                            <MudTd DataLabel="Menü Satış Fiyatı">
+                                <MudNumericField @bind-Value="@context.DisplayPrice"
+                                                 Format="N2"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                                 OnBlur="@(() => UpdateProductPrice(context))"
+                                                 Variant="Variant.Outlined"
+                                                 Margin="Margin.Dense"
+                                                 Style="width: 120px;" />
+                            </MudTd>
+                            <MudTd DataLabel="Durum">
+                                <MudSwitch T="bool"
+                                           Value="@context.IsAvailable"
+                                           ValueChanged="@((bool val) => ToggleAvailability(context, val))"
+                                           Color="Color.Success"
+                                           UncheckedColor="Color.Error"
+                                           Label="@(context.IsAvailable ? "Aktif" : "Pasif")" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+            </MudTabPanel>
+        }
+    </MudTabs>
+}
+
+@code {
+
+    private const string DefaultProductImage = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIiB2aWV3Qm94PSIwIDAgMTYwIDE2MCI+PHJlY3Qgd2lkdGg9IjE2MCIgaGVpZ2h0PSIxNjAiIGZpbGw9IiNmM2Y0ZjYiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNjYmQ1ZTEiIHN0cm9rZS13aWR0aD0iNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNNDAgMTA0IEw2NiA3NCBMODYgOTYgTDEwNCA3OCBMMTIwIDEwNCBaIi8+PGNpcmNsZSBjeD0iNTgiIGN5PSI1NiIgcj0iMTAiLz48L2c+PC9zdmc+";
+
+    private List<MenuCategoryDto>? _categories;
+    private bool _isSaving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMenuData();
+    }
+
+    private async Task LoadMenuData()
+    {
+        try
+        {
+            _categories = await ApiService.GetAsync<MenuCategoryDto>($"{Api.BaseUrl}/api/products-by-categories");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Veri yüklenirken hata oluştu: {ex.Message}", Severity.Error);
+            _categories = [];
+        }
+    }
+
+    private async Task OpenProductOptions(MenuProductDto product)
+    {
+        var parameters = new DialogParameters<ProductOptionsDialog>
+        {
+            { x => x.Product, product }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogService.ShowAsync<ProductOptionsDialog>("Ürün özellikleri", parameters, options);
+    }
+
+    private async Task UpdateProductPrice(MenuProductDto product)
+    {
+        _isSaving = true;
+        try
+        {
+            var response = await ApiService.PostAsync(
+                $"{Api.BaseUrl}/api/products/update-price",
+                new UpdateProductPriceDto { Id = product.Id, DisplayPrice = product.DisplayPrice });
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"{product.Name} fiyatı güncellendi.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"{product.Name} fiyatı güncellenemedi.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fiyat güncellenemedi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task ToggleAvailability(MenuProductDto product, bool newValue)
+    {
+        var previousValue = product.IsAvailable;
+        product.IsAvailable = newValue;
+
+        try
+        {
+            var response = await ApiService.PostAsync(
+                $"{Api.BaseUrl}/api/products/toggle-availability",
+                new ToggleProductAvailabilityDto { Id = product.Id, IsAvailable = newValue });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                product.IsAvailable = previousValue;
+                Snackbar.Add("Durum güncellenirken bir hata oluştu.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            product.IsAvailable = previousValue;
+            Snackbar.Add($"Bağlantı hatası: {ex.Message}", Severity.Error);
+        }
+    }
+}

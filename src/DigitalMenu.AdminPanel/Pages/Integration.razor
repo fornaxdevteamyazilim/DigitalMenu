@@ -1,0 +1,319 @@
+@page "/integration"
+@using DigitalMenu.AdminPanel.Services
+@inject ApiService ApiService
+@inject ApiSettings Api
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h4" Class="mb-4">Trendyol Yemek Entegrasyonu</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">API Kimlik Bilgileri</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                        Trendyol Satıcı Paneli &gt; Hesap Bilgileri ekranından alabilirsiniz.
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (_settings == null)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+                }
+                else
+                {
+                    <MudTextField @bind-Value="_settings.TrendyolSellerId"
+                                  Label="Satıcı ID (Supplier ID)"
+                                  HelperText="Örn: 772284"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="mb-3" />
+
+                    <MudTextField @bind-Value="_settings.TrendyolStoreId"
+                                  Label="Mağaza / Restoran ID (Store ID)"
+                                  HelperText="Elle girebilir ya da aşağıdan getirip seçebilirsiniz"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="mb-2" />
+
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Storefront"
+                               OnClick="GetStores"
+                               Disabled="_isLoadingStores"
+                               Class="mb-3"
+                               FullWidth="true">
+                        @if (_isLoadingStores)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Getiriliyor...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Mağazalarımı Getir</MudText>
+                        }
+                    </MudButton>
+
+                    @if (_stores is { Count: > 0 })
+                    {
+                        <MudSelect T="string"
+                                   Value="_settings.TrendyolStoreId"
+                                   ValueChanged="OnStoreSelected"
+                                   Label="Mağaza Seç"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Class="mb-3">
+                            @foreach (var store in _stores)
+                            {
+                                <MudSelectItem T="string" Value="@store.Id">
+                                    @store.Name (@store.Id) — @store.WorkingStatus
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+
+                    <MudTextField @bind-Value="_settings.TrendyolApiKey"
+                                  Label="API Key"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="mb-3" />
+
+                    <MudTextField @bind-Value="_settings.TrendyolApiSecret"
+                                  Label="API Secret"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  InputType="InputType.Password"
+                                  Class="mb-3" />
+
+                    <MudTextField @bind-Value="_settings.TrendyolAgentName"
+                                  Label="Agent Adı (x-agentname)"
+                                  HelperText="Genellikle entegrasyon e-postanız"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="mb-3" />
+
+                    <MudTextField @bind-Value="_settings.TrendyolExecutorUser"
+                                  Label="Executor User (x-executor-user)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="mb-3" />
+
+                    <MudNumericField @bind-Value="_settings.PriceMultiplier"
+                                     Label="Fiyat Çarpanı"
+                                     HelperText="Örn: paket fiyattan %15 düşmek için 0.85. Senkronize Et bu değeri otomatik kaydeder."
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     Min="0.01m"
+                                     Max="5.00m"
+                                     Step="0.01m"
+                                     Immediate="true"
+                                     Format="0.##" />
+                }
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.Save"
+                           OnClick="SaveSettings"
+                           Disabled="_settings == null || _isSaving">
+                    @if (_isSaving)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Kaydediliyor...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>Bilgileri Kaydet</MudText>
+                    }
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Menü Senkronizasyonu</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText>Trendyol üzerindeki menünüzü, fiyatlarınızı ve ürün görsellerinizi tek tıkla dijital menünüze aktarabilirsiniz.</MudText>
+                <MudAlert Severity="Severity.Info" Class="mt-3">
+                    Senkronize Et, güncel fiyat çarpanı ve API bilgilerini kaydedip menüyü Trendyol'dan çeker.
+                    Menü satış fiyatları = Trendyol satış fiyatı × çarpan.
+                </MudAlert>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Sync"
+                           OnClick="SyncMenu"
+                           Disabled="_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Senkronize Ediliyor...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>Şimdi Senkronize Et</MudText>
+                    }
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+
+    private TrendyolSettingsDto? _settings;
+    private List<TrendyolStoreItemDto>? _stores;
+    private bool _isProcessing = false;
+    private bool _isSaving = false;
+    private bool _isLoadingStores = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        try
+        {
+            _settings = await ApiService.GetSingleAsync<TrendyolSettingsDto>($"{Api.BaseUrl}/api/integration/trendyol-settings")
+                        ?? new TrendyolSettingsDto();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ayarlar yüklenemedi: {ex.Message}", Severity.Error);
+            _settings = new TrendyolSettingsDto();
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        if (_settings == null) return;
+
+        _isSaving = true;
+        try
+        {
+            var response = await ApiService.PostAsync($"{Api.BaseUrl}/api/integration/trendyol-settings", _settings);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Trendyol bilgileri kaydedildi.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Bilgiler kaydedilemedi.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Bağlantı hatası: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void OnStoreSelected(string storeId)
+    {
+        if (_settings != null)
+        {
+            _settings.TrendyolStoreId = storeId;
+        }
+    }
+
+    private async Task GetStores()
+    {
+        if (_settings == null) return;
+
+        if (string.IsNullOrWhiteSpace(_settings.TrendyolSellerId)
+            || string.IsNullOrWhiteSpace(_settings.TrendyolApiKey)
+            || string.IsNullOrWhiteSpace(_settings.TrendyolApiSecret))
+        {
+            Snackbar.Add("Önce Satıcı ID, API Key ve API Secret girin.", Severity.Warning);
+            return;
+        }
+
+        _isLoadingStores = true;
+        try
+        {
+            // Mağazaları çekebilmek için önce mevcut kimlik bilgilerini kaydediyoruz.
+            var saveResponse = await ApiService.PostAsync($"{Api.BaseUrl}/api/integration/trendyol-settings", _settings);
+            if (!saveResponse.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Kimlik bilgileri kaydedilemedi, mağazalar getirilemiyor.", Severity.Error);
+                return;
+            }
+
+            _stores = await ApiService.GetAsync<TrendyolStoreItemDto>($"{Api.BaseUrl}/api/integration/trendyol-stores");
+
+            if (_stores is { Count: > 0 })
+            {
+                Snackbar.Add($"{_stores.Count} mağaza bulundu. Listeden seçebilirsiniz.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Mağaza bulunamadı. Bilgileri kontrol edin.", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Mağazalar getirilemedi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoadingStores = false;
+        }
+    }
+
+    private async Task SyncMenu()
+    {
+        if (_settings == null) return;
+
+        if (_settings.PriceMultiplier <= 0)
+        {
+            Snackbar.Add("Fiyat çarpanı 0'dan büyük olmalıdır (örn. 0.85).", Severity.Warning);
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            // Çarpan ve API bilgileri önce kaydedilir; senkron DB'deki güncel çarpanı kullanır
+            var saveResponse = await ApiService.PostAsync($"{Api.BaseUrl}/api/integration/trendyol-settings", _settings);
+            if (!saveResponse.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Ayarlar kaydedilemedi, senkronizasyon iptal edildi.", Severity.Error);
+                return;
+            }
+
+            var response = await ApiService.PostEmptyAsync($"{Api.BaseUrl}/api/integration/trendyol-sync");
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add(
+                    $"Menü senkronize edildi. Uygulanan fiyat çarpanı: {_settings.PriceMultiplier:0.##}",
+                    Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Senkronizasyon sırasında bir hata oluştu. API anahtarlarını kontrol edin.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Bağlantı hatası: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+}

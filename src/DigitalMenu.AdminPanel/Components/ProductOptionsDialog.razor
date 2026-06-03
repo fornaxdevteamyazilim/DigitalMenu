@@ -1,0 +1,235 @@
+@using DigitalMenu.Core.DTOs
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Product.Name — Özellikler</MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">QR menüde çıkarılabilir malzeme ve ekstra seçenekler</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true" Class="mt-2">
+            <MudTabPanel Text="@($"Çıkarılabilir ({_removable.Count})")" Icon="@Icons.Material.Filled.RemoveCircleOutline">
+                <MudTable Items="_removable" Dense="true" Hover="true" Class="mt-3">
+                    <HeaderContent>
+                        <MudTh>Malzeme adı</MudTh>
+                        <MudTh Style="width: 140px;">Kimlik (Id)</MudTh>
+                        <MudTh Style="width: 56px;"></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>
+                            <MudTextField @bind-Value="context.Label"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Placeholder="Örn: Domates" />
+                        </MudTd>
+                        <MudTd>
+                            <MudTextField @bind-Value="context.Id"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Placeholder="otomatik" />
+                        </MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => RemoveRemovable(context))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           Class="mt-2"
+                           OnClick="AddRemovable">
+                    Malzeme ekle
+                </MudButton>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@($"Ekstra ({_extras.Count})")" Icon="@Icons.Material.Filled.AddCircleOutline">
+                <MudTable Items="_extras" Dense="true" Hover="true" Class="mt-3">
+                    <HeaderContent>
+                        <MudTh>Seçenek adı</MudTh>
+                        <MudTh Style="width: 110px;">Fiyat (₺)</MudTh>
+                        <MudTh>Grup</MudTh>
+                        <MudTh Style="width: 120px;">Kimlik</MudTh>
+                        <MudTh Style="width: 56px;"></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>
+                            <MudTextField @bind-Value="context.Label"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                        </MudTd>
+                        <MudTd>
+                            <MudNumericField @bind-Value="context.Price"
+                                             Format="N2"
+                                             Min="0"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense" />
+                        </MudTd>
+                        <MudTd>
+                            <MudTextField @bind-Value="context.GroupName"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Placeholder="Örn: Sos Seçimi" />
+                        </MudTd>
+                        <MudTd>
+                            <MudTextField @bind-Value="context.Id"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                        </MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => RemoveExtra(context))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           Class="mt-2"
+                           OnClick="AddExtra">
+                    Ekstra seçenek ekle
+                </MudButton>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">İptal</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="_saving"
+                   OnClick="Save">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+            }
+            Kaydet
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public MenuProductDto Product { get; set; } = null!;
+
+    [Inject]
+    private ApiService ApiService { get; set; } = null!;
+
+    [Inject]
+    private ApiSettings Api { get; set; } = null!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = null!;
+
+    private List<MenuProductOptionDto> _removable = [];
+    private List<MenuProductOptionDto> _extras = [];
+    private bool _saving;
+
+    protected override void OnInitialized()
+    {
+        _removable = Product.RemovableIngredients.Select(Clone).ToList();
+        _extras = Product.ExtraSauces.Select(Clone).ToList();
+    }
+
+    private static MenuProductOptionDto Clone(MenuProductOptionDto source) =>
+        new()
+        {
+            Id = source.Id,
+            Label = source.Label,
+            Price = source.Price,
+            GroupName = source.GroupName
+        };
+
+    private void AddRemovable() =>
+        _removable.Add(new MenuProductOptionDto { Id = NewOptionId(), Label = string.Empty, Price = 0 });
+
+    private void AddExtra() =>
+        _extras.Add(new MenuProductOptionDto
+        {
+            Id = NewOptionId(),
+            Label = string.Empty,
+            Price = 0,
+            GroupName = "Ekstra Seçenekler"
+        });
+
+    private static string NewOptionId() => Guid.NewGuid().ToString("N")[..12];
+
+    private void RemoveRemovable(MenuProductOptionDto item) => _removable.Remove(item);
+
+    private void RemoveExtra(MenuProductOptionDto item) => _extras.Remove(item);
+
+    private bool NormalizeAndValidate()
+    {
+        foreach (var list in new[] { _removable, _extras })
+        {
+            foreach (var item in list)
+            {
+                item.Label = item.Label?.Trim() ?? string.Empty;
+                item.Id = string.IsNullOrWhiteSpace(item.Id) ? NewOptionId() : item.Id.Trim();
+                item.GroupName = string.IsNullOrWhiteSpace(item.GroupName) ? null : item.GroupName.Trim();
+            }
+
+            list.RemoveAll(i => string.IsNullOrWhiteSpace(i.Label));
+        }
+
+        var duplicateIds = _removable.Select(i => i.Id)
+            .Concat(_extras.Select(i => i.Id))
+            .GroupBy(id => id)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateIds.Count > 0)
+        {
+            Snackbar.Add("Aynı kimlik (Id) birden fazla seçenekte kullanılamaz.", Severity.Warning);
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task Save()
+    {
+        if (!NormalizeAndValidate()) return;
+
+        _saving = true;
+        try
+        {
+            var payload = new UpdateProductOptionsDto
+            {
+                RemovableIngredients = _removable,
+                ExtraSauces = _extras
+            };
+
+            var response = await ApiService.PutAsync(
+                $"{Api.BaseUrl}/api/products/{Product.Id}/options",
+                payload);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Özellikler kaydedilemedi.", Severity.Error);
+                return;
+            }
+
+            Product.RemovableIngredients = _removable.Select(Clone).ToList();
+            Product.ExtraSauces = _extras.Select(Clone).ToList();
+            Snackbar.Add("Ürün özellikleri güncellendi.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Kayıt hatası: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

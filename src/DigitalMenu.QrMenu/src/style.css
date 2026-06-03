@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* Mobil cihazlarda tıklama gölgesini kaldırmak için küçük bir fix */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
