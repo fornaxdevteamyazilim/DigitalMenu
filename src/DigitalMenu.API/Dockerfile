@@ -1,16 +1,18 @@
 # DigitalMenu.API — Railway / Docker
+# Build context: repository root (Railway uses railway.json + src/DigitalMenu.API/Dockerfile)
+# Local: docker build -f src/DigitalMenu.API/Dockerfile -t digitalmenu-api .
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY ["DigitalMenu.API/DigitalMenu.API.csproj", "DigitalMenu.API/"]
-COPY ["DigitalMenu.Core/DigitalMenu.Core.csproj", "DigitalMenu.Core/"]
-COPY ["DigitalMenu.Infrastructure/DigitalMenu.Infrastructure.csproj", "DigitalMenu.Infrastructure/"]
+COPY ["src/DigitalMenu.API/DigitalMenu.API.csproj", "DigitalMenu.API/"]
+COPY ["src/DigitalMenu.Core/DigitalMenu.Core.csproj", "DigitalMenu.Core/"]
+COPY ["src/DigitalMenu.Infrastructure/DigitalMenu.Infrastructure.csproj", "DigitalMenu.Infrastructure/"]
 
 RUN dotnet restore "DigitalMenu.API/DigitalMenu.API.csproj"
 
-COPY DigitalMenu.API/ DigitalMenu.API/
-COPY DigitalMenu.Core/ DigitalMenu.Core/
-COPY DigitalMenu.Infrastructure/ DigitalMenu.Infrastructure/
+COPY src/DigitalMenu.API/ DigitalMenu.API/
+COPY src/DigitalMenu.Core/ DigitalMenu.Core/
+COPY src/DigitalMenu.Infrastructure/ DigitalMenu.Infrastructure/
 
 RUN dotnet publish "DigitalMenu.API/DigitalMenu.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
 

@@ -4,10 +4,10 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
 
 ## Mimari
 
-| Servis | Teknoloji | Railway kök dizini | Dockerfile |
-|--------|-----------|----------------------|------------|
-| `digitalmenu-api` | ASP.NET Core 10 | `src` | `DigitalMenu.API/Dockerfile` |
-| `digitalmenu-admin` | Blazor WASM + nginx | `src` | `DigitalMenu.AdminPanel/Dockerfile` |
+| Servis | Teknoloji | Railway Root Directory | Dockerfile |
+|--------|-----------|------------------------|------------|
+| `digitalmenu-api` | ASP.NET Core 10 | *(boş — repo kökü)* | `src/DigitalMenu.API/Dockerfile` |
+| `digitalmenu-admin` | Blazor WASM + nginx | *(boş — repo kökü)* | `src/DigitalMenu.AdminPanel/Dockerfile` |
 | `digitalmenu-qrmenu` | Vue + nginx | `src/DigitalMenu.QrMenu` | `Dockerfile` |
 | PostgreSQL | Eklenti | — | — |
 
@@ -28,9 +28,10 @@ Bu rehber üç ayrı Railway servisi kurar: **API**, **Admin Panel** (Blazor WAS
 1. **New Service → GitHub Repo** → `fornaxdevteamyazilim/DigitalMenu` repoyu seçin.
 2. **Settings → Build** (önemli — Railpack hatasını önler):
    - **Builder:** `Dockerfile` (Railpack / Nixpacks değil)
-   - **Root Directory:** `src`
-   - **Dockerfile Path:** `DigitalMenu.API/Dockerfile`
-   - Repoda `src/railway.toml` ve kök `railway.json` builder’ı `DOCKERFILE` olarak sabitler; deploy logunda `Using Dockerfile` görmelisiniz.
+   - **Root Directory:** *(boş bırakın — repo kökü)*  
+     `src` yaparsanız `DigitalMenu.Infrastructure: not found` hatası alırsınız; Dockerfile repo kökünden derlenir.
+   - **Dockerfile Path:** `src/DigitalMenu.API/Dockerfile`
+   - Kök `railway.json` builder’ı `DOCKERFILE` olarak sabitler.
 3. **Variables** (örnek):
 
    | Değişken | Açıklama |
@@ -70,9 +71,8 @@ QR örnek link: `https://<qrmenu-domain>/r/lezzet-duragi?table=Masa+1`
 
 1. Yeni servis, **Settings → Build:**
    - **Builder:** `Dockerfile`
-   - **Root Directory:** `src`
-   - **Dockerfile Path:** `DigitalMenu.AdminPanel/Dockerfile`
-   - (İsteğe bağlı) **Config file:** `src/DigitalMenu.AdminPanel/railway.toml` — API’nin `src/railway.toml` dosyasından ayrılsın diye
+   - **Root Directory:** *(boş — repo kökü)*
+   - **Dockerfile Path:** `src/DigitalMenu.AdminPanel/Dockerfile`
 2. **Docker build arg:**
 
    | Arg | Değer |
@@ -100,8 +100,8 @@ Kontrol listesi:
 ## Yerel Docker ile API testi
 
 ```powershell
-cd c:\projects\Menю\src
-docker build -f DigitalMenu.API/Dockerfile -t digitalmenu-api .
+cd c:\projects\Menю
+docker build -f src/DigitalMenu.API/Dockerfile -t digitalmenu-api .
 docker run --rm -p 8080:8080 `
   -e ASPNETCORE_ENVIRONMENT=Production `
   -e ConnectionStrings__DefaultConnection="Host=host.docker.internal;Port=5432;Database=digital_menu_saas;Username=menu_user;Password=MenuSecurePassword2026!" `
@@ -122,7 +122,8 @@ docker run --rm -p 8080:8080 `
 | “Only public repositories can be added using the GitHub URL” | Repo private veya URL yapıştırılıyor; repoyu public yapın veya GitHub uygulamasıyla listeden seçin |
 | “Branch 'main' not found” | Railway’de **Branch** alanını `main` yapın (repo `master` kullanıyorsa önce GitHub’da `main` dalına geçin) |
 | `DigitalMen` / yanlış repo adı | Tam ad: **`fornaxdevteamyazilim/DigitalMenu`** (sonunda `u`) |
-| `railpack process exited with an error` | Railway Railpack ile derliyor; **Builder = Dockerfile**, Root `src`, path `DigitalMenu.API/Dockerfile`. Son commit’i çekip redeploy edin. Logda `Railpack` yerine `Dockerfile` görünmeli |
+| `railpack process exited with an error` | **Builder = Dockerfile**, Root *(boş)*, path `src/DigitalMenu.API/Dockerfile` |
+| `DigitalMenu.Infrastructure: not found` | Root Directory `src` iken context yanlış; Root’u **boş** bırakın (repo kökü) |
 | API açılmıyor | `DATABASE_URL` veya Postgres referansı eksik |
 | CORS hatası | `CORS_ALLOWED_ORIGINS` eksik veya `https` uyumsuzluğu |
 | QR menü boş / hata | `VITE_API_BASE_URL` build sırasında set edilmemiş |
