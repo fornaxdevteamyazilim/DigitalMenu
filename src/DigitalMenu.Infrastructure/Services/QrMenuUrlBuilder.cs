@@ -2,8 +2,11 @@ using Microsoft.Extensions.Configuration;
 
 namespace DigitalMenu.Infrastructure.Services;
 
-internal static class QrMenuUrlBuilder
+public static class QrMenuUrlBuilder
 {
+    /// <summary>Railway QR Menü — appsettings / env yoksa production fallback.</summary>
+    public const string ProductionDefaultBaseUrl = "https://triumphant-abundance-production-1cb2.up.railway.app/r";
+
     public static string Build(string baseUrl, string tenantId, string tableNumber)
     {
         return $"{baseUrl.TrimEnd('/')}/{tenantId}?table={Uri.EscapeDataString(tableNumber)}";
@@ -18,22 +21,23 @@ internal static class QrMenuUrlBuilder
         string.Equals(configuration["ASPNETCORE_ENVIRONMENT"], "Development", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// QrMenu:BaseUrl veya Railway QrMenu__BaseUrl.
-    /// </summary>
     public static string ResolveBaseUrl(IConfiguration configuration)
     {
-        var url = configuration["QrMenu:BaseUrl"]?.TrimEnd('/');
-        if (!string.IsNullOrWhiteSpace(url) && !IsLocalhostBase(url))
-            return url;
+        foreach (var candidate in GetCandidates(configuration))
+        {
+            if (!string.IsNullOrWhiteSpace(candidate) && !IsLocalhostBase(candidate))
+                return candidate.TrimEnd('/');
+        }
 
-        url = Environment.GetEnvironmentVariable("QrMenu__BaseUrl")?.TrimEnd('/');
-        if (!string.IsNullOrWhiteSpace(url) && !IsLocalhostBase(url))
-            return url;
+        return IsDevelopmentEnvironment(configuration)
+            ? "http://localhost:5173/r"
+            : ProductionDefaultBaseUrl.TrimEnd('/');
+    }
 
-        if (IsDevelopmentEnvironment(configuration))
-            return "http://localhost:5173/r";
-
-        return "http://localhost:5173/r";
+    private static IEnumerable<string?> GetCandidates(IConfiguration configuration)
+    {
+        yield return configuration["QrMenu:BaseUrl"];
+        yield return Environment.GetEnvironmentVariable("QrMenu__BaseUrl");
+        yield return Environment.GetEnvironmentVariable("QRMENU__BASEURL");
     }
 }

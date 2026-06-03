@@ -9,7 +9,7 @@ public class TableService : ITableService
 {
     private readonly AppDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
-    private readonly string _qrMenuBaseUrl;
+    private readonly IConfiguration _configuration;
 
     public TableService(
         AppDbContext dbContext,
@@ -18,7 +18,7 @@ public class TableService : ITableService
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
-        _qrMenuBaseUrl = QrMenuUrlBuilder.ResolveBaseUrl(configuration);
+        _configuration = configuration;
     }
 
     public async Task<Table> CreateTableAsync(string tableNumber)
@@ -27,7 +27,8 @@ public class TableService : ITableService
         if (string.IsNullOrEmpty(tenantId))
             throw new Exception("İşletme bilgisi doğrulanamadı.");
 
-        var qrCodeUrl = QrMenuUrlBuilder.Build(_qrMenuBaseUrl, tenantId, tableNumber);
+        var baseUrl = QrMenuUrlBuilder.ResolveBaseUrl(_configuration);
+        var qrCodeUrl = QrMenuUrlBuilder.Build(baseUrl, tenantId, tableNumber);
 
         var table = new Table
         {
@@ -45,7 +46,25 @@ public class TableService : ITableService
     public async Task<List<Table>> GetTablesAsync()
     {
         var tables = await _dbContext.Tables.OrderBy(t => t.TableNumber).ToListAsync();
-        await RepairStoredQrUrlsAsync(tables);
+        var baseUrl = QrMenuUrlBuilder.ResolveBaseUrl(_configuration);
+
+        var dirty = false;
+        foreach (var table in tables)
+        {
+            if (string.IsNullOrEmpty(table.TenantId))
+                continue;
+
+            var correct = QrMenuUrlBuilder.Build(baseUrl, table.TenantId, table.TableNumber);
+            if (table.QrCodeUrl == correct)
+                continue;
+
+            table.QrCodeUrl = correct;
+            dirty = true;
+        }
+
+        if (dirty)
+            await _dbContext.SaveChangesAsync();
+
         return tables;
     }
 
@@ -73,28 +92,5 @@ public class TableService : ITableService
         _dbContext.Tables.Update(table);
         await _dbContext.SaveChangesAsync();
         return true;
-    }
-
-    private async Task RepairStoredQrUrlsAsync(List<Table> tables)
-    {
-        if (QrMenuUrlBuilder.IsLocalhostBase(_qrMenuBaseUrl))
-            return;
-
-        var dirty = false;
-        foreach (var table in tables)
-        {
-            if (string.IsNullOrEmpty(table.TenantId))
-                continue;
-
-            var correct = QrMenuUrlBuilder.Build(_qrMenuBaseUrl, table.TenantId, table.TableNumber);
-            if (table.QrCodeUrl == correct)
-                continue;
-
-            table.QrCodeUrl = correct;
-            dirty = true;
-        }
-
-        if (dirty)
-            await _dbContext.SaveChangesAsync();
     }
 }

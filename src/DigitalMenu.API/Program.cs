@@ -91,6 +91,18 @@ app.UseHttpsRedirection();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
+app.MapGet("/api/debug/qr-config", (IConfiguration config) =>
+{
+    var baseUrl = QrMenuUrlBuilder.ResolveBaseUrl(config);
+    return Results.Ok(new
+    {
+        qrMenuBaseUrl = baseUrl,
+        environment = config["ASPNETCORE_ENVIRONMENT"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+        configQrMenu = config["QrMenu:BaseUrl"],
+        envQrMenu = Environment.GetEnvironmentVariable("QrMenu__BaseUrl")
+    });
+});
+
 app.UseCors("BlazorWasm");
 
 // 4. Yazdığımız Tenant Doğrulama Middleware'ini Boru Hattına (Pipeline) Ekle

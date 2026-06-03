@@ -26,6 +26,8 @@ public class TenantValidatorMiddleware
         var path = context.Request.Path.Value?.ToLower();
         if (path != null && (
             path.Contains("/swagger")
+            || path.Contains("/health")
+            || path.Contains("/api/debug")
             || path.Contains("/api/tenants/register")
             || path.StartsWith("/hubs")))
         {
