@@ -28,6 +28,7 @@ public class TenantValidatorMiddleware
             path.Contains("/swagger")
             || path.Contains("/health")
             || path.Contains("/api/debug")
+            || path.Contains("/api/admin")
             || path.Contains("/api/tenants/register")
             || path.StartsWith("/hubs")))
         {
