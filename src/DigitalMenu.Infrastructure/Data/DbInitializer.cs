@@ -19,6 +19,7 @@ public static class DbInitializer
     public static async Task SeedAsync(AppDbContext context, IConfiguration configuration)
     {
         await context.Database.MigrateAsync();
+        await RefreshQrCodeUrlsAsync(context, configuration);
 
         var qrBaseUrl = QrMenuUrlBuilder.ResolveBaseUrl(configuration);
 
@@ -128,27 +129,33 @@ public static class DbInitializer
     }
 
     /// <summary>
-    /// Production'da QrMenu__BaseUrl set edildiğinde eski localhost QR linklerini günceller.
+    /// <c>QrMenu__BaseUrl</c> / production base ile <c>tables.qr_code_url</c> değerlerini hizalar.
+    /// Localhost hedef (yerel dev) iken dokunulmaz; deploy ortamında tüm uyumsuz satırlar güncellenir.
     /// </summary>
     public static async Task RefreshQrCodeUrlsAsync(AppDbContext context, IConfiguration configuration)
     {
         var qrBaseUrl = QrMenuUrlBuilder.ResolveBaseUrl(configuration);
         if (QrMenuUrlBuilder.IsLocalhostBase(qrBaseUrl))
         {
-            Console.WriteLine("--> QR URL güncellemesi atlandı: QrMenu__BaseUrl / Production ayarı yok.");
+            Console.WriteLine("--> QR URL backfill atlandı (hedef base localhost — yerel geliştirme).");
             return;
         }
 
+        var forceAll = QrMenuUrlBuilder.IsDeployedEnvironment();
         var tables = await context.Tables.IgnoreQueryFilters().ToListAsync();
         var updated = 0;
+        var staleFound = 0;
 
         foreach (var table in tables)
         {
             if (string.IsNullOrEmpty(table.TenantId))
                 continue;
 
-            var newUrl = QrMenuUrlBuilder.Build(qrBaseUrl!, table.TenantId, table.TableNumber);
-            if (table.QrCodeUrl == newUrl)
+            if (QrMenuUrlBuilder.IsStaleQrCodeUrl(table.QrCodeUrl))
+                staleFound++;
+
+            var newUrl = QrMenuUrlBuilder.Build(qrBaseUrl, table.TenantId, table.TableNumber);
+            if (!QrMenuUrlBuilder.ShouldUpdateQrCodeUrl(table.QrCodeUrl, newUrl, forceAll))
                 continue;
 
             table.QrCodeUrl = newUrl;
@@ -156,9 +163,11 @@ public static class DbInitializer
         }
 
         if (updated > 0)
-        {
             await context.SaveChangesAsync();
-            Console.WriteLine($"--> {updated} masa QR linki güncellendi → {qrBaseUrl}");
-        }
+
+        Console.WriteLine(
+            updated > 0
+                ? $"--> QR backfill: {updated} masa güncellendi (eski localhost: {staleFound}, base: {qrBaseUrl})."
+                : $"--> QR backfill: güncelleme gerekmedi (base: {qrBaseUrl}).");
     }
 }

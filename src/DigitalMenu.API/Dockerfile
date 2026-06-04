@@ -19,6 +19,8 @@ RUN dotnet publish "DigitalMenu.API/DigitalMenu.API.csproj" -c Release -o /app/p
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV QrMenu__BaseUrl=https://triumphant-abundance-production-1cb2.up.railway.app/r
 EXPOSE 8080
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "DigitalMenu.API.dll"]

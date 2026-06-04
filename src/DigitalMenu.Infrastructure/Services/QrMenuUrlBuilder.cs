@@ -17,9 +17,27 @@ public static class QrMenuUrlBuilder
         || baseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase)
         || baseUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Veritabanında seed/deploy sırasında kalan localhost QR linkleri.</summary>
+    public static bool IsStaleQrCodeUrl(string? qrCodeUrl) =>
+        string.IsNullOrWhiteSpace(qrCodeUrl)
+        || qrCodeUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+        || qrCodeUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase);
+
+    public static bool ShouldUpdateQrCodeUrl(string? currentUrl, string newUrl, bool forceAllMismatches) =>
+        !string.Equals(currentUrl, newUrl, StringComparison.Ordinal)
+        && (forceAllMismatches || IsStaleQrCodeUrl(currentUrl));
+
+    /// <summary>Railway/Docker: PORT veya Railway meta — Development env yanlış set olsa bile localhost kullanılmaz.</summary>
+    public static bool IsDeployedEnvironment() =>
+        !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT"))
+        || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAILWAY_PROJECT_ID"))
+        || (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PORT"))
+            && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DATABASE_URL")));
+
     public static bool IsDevelopmentEnvironment(IConfiguration configuration) =>
-        string.Equals(configuration["ASPNETCORE_ENVIRONMENT"], "Development", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase);
+        !IsDeployedEnvironment()
+        && (string.Equals(configuration["ASPNETCORE_ENVIRONMENT"], "Development", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase));
 
     public static string ResolveBaseUrl(IConfiguration configuration)
     {
@@ -29,9 +47,10 @@ public static class QrMenuUrlBuilder
                 return candidate.TrimEnd('/');
         }
 
-        return IsDevelopmentEnvironment(configuration)
-            ? "http://localhost:5173/r"
-            : ProductionDefaultBaseUrl.TrimEnd('/');
+        if (IsDevelopmentEnvironment(configuration))
+            return "http://localhost:5173/r";
+
+        return ProductionDefaultBaseUrl.TrimEnd('/');
     }
 
     private static IEnumerable<string?> GetCandidates(IConfiguration configuration)

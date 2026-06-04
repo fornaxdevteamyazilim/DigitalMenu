@@ -28,6 +28,8 @@ dist-ssr/
 .env.*
 !.env.example
 appsettings.Development.json
+!src/DigitalMenu.API/appsettings.Development.json
+!src/DigitalMenu.AdminPanel/wwwroot/appsettings.Development.json
 appsettings.*.local.json
 
 # IDE / OS

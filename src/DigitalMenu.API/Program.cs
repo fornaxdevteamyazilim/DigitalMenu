@@ -98,9 +98,19 @@ app.MapGet("/api/debug/qr-config", (IConfiguration config) =>
     {
         qrMenuBaseUrl = baseUrl,
         environment = config["ASPNETCORE_ENVIRONMENT"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+        isDeployed = QrMenuUrlBuilder.IsDeployedEnvironment(),
         configQrMenu = config["QrMenu:BaseUrl"],
         envQrMenu = Environment.GetEnvironmentVariable("QrMenu__BaseUrl")
     });
+});
+
+app.MapPost("/api/admin/refresh-qr-urls", async (AppDbContext db, IConfiguration config) =>
+{
+    await DbInitializer.RefreshQrCodeUrlsAsync(db, config);
+    var baseUrl = QrMenuUrlBuilder.ResolveBaseUrl(config);
+    var staleCount = await db.Tables.IgnoreQueryFilters()
+        .CountAsync(t => QrMenuUrlBuilder.IsStaleQrCodeUrl(t.QrCodeUrl));
+    return Results.Ok(new { qrMenuBaseUrl = baseUrl, remainingStale = staleCount });
 });
 
 app.UseCors("BlazorWasm");
